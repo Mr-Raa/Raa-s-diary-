@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Clean Minimalist Obsidian Slate Background -->
+    <linearGradient id="clean-bg-m" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#0b1120" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <!-- Subtle Ambient Glow -->
+    <radialGradient id="clean-glow-m" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.22" />
+      <stop offset="60%" stop-color="#6366f1" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Crisp Iconic Gradient for the 'R' Glyph -->
+    <linearGradient id="glyph-grad-m" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="50%" stop-color="#e0e7ff" />
+      <stop offset="100%" stop-color="#818cf8" />
+    </linearGradient>
+
+    <!-- Star Accent Gradient -->
+    <linearGradient id="star-grad-m" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#67e8f9" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+  </defs>
+
+  <!-- Full Bleed Background for Maskable Icon (Circle/Squircle mask safe) -->
+  <rect width="512" height="512" fill="url(#clean-bg-m)" />
+  <rect width="512" height="512" fill="url(#clean-glow-m)" />
+
+  <!-- Centered Safe-Zone Content (Scale 0.78, centered) -->
+  <g transform="translate(56.32, 56.32) scale(0.78)">
+    <!-- Bold Minimalist Monogram "R" -->
+    <path
+      fill-rule="evenodd"
+      clip-rule="evenodd"
+      d="M168 136C154.745 136 144 146.745 144 160V352C144 365.255 154.745 376 168 376C181.255 376 192 365.255 192 352V280H248.5L312.3 365.07C319.46 374.61 330.68 380 342.6 380H343.4C360.7 380 372.4 361.64 364.5 346.22L312.7 245.5C337.5 233.1 354 207.6 354 178C354 136 320 136 276 136H168ZM192 184H268C296 184 306 192 306 210C306 228 296 236 268 236H192V184Z"
+      fill="url(#glyph-grad-m)"
+    />
+
+    <!-- Minimalist Spark Indicator -->
+    <path
+      d="M380 112C382.5 127 387 131.5 402 134C387 136.5 382.5 141 380 156C377.5 141 373 136.5 358 134C373 131.5 377.5 127 380 112Z"
+      fill="url(#star-grad-m)"
+    />
+  </g>
+</svg>
