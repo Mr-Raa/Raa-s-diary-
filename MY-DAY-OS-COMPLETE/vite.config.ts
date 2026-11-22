@@ -25,10 +25,10 @@ export default defineConfig(({ command }) => {
               ],
               manifest: {
                 id: '/',
-                name: 'MY DAY OS — Daily Productivity OS',
-                short_name: 'MY DAY OS',
+                name: "Raa's Diary — Personal Life OS",
+                short_name: "Raa's Diary",
                 description:
-                  'MY DAY OS: Minimalist Liquid Glass Personal Life and Productivity Operating System with AURAA AI, Routines, Tasks, Diary, Focus and Alarms.',
+                  "Raa's Diary: Minimalist Liquid Glass Personal Life and Productivity Operating System with AURAA AI, Routines, Tasks, Diary, Focus and Alarms.",
                 theme_color: '#0c1118',
                 background_color: '#0c1118',
                 display: 'standalone',
@@ -41,7 +41,7 @@ export default defineConfig(({ command }) => {
                   {
                     name: 'Quick Add Task',
                     short_name: 'Tasks',
-                    description: "Open today's tasks in MY DAY OS",
+                    description: "Open today's tasks in Raa's Diary",
                     url: '/?module=tasks',
                     icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
                   },
