@@ -343,6 +343,35 @@ export const TasksView: React.FC<TasksViewProps> = ({
         ))}
       </div>
 
+      {/* Prominent Category Pills (Personal / Work / Study / Health / All) */}
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+        {[
+          { key: 'All', label: 'All (બધું)', icon: '🌐' },
+          { key: 'Personal', label: 'Personal (પર્સનલ)', icon: '👤' },
+          { key: 'Work', label: 'Work (કામ/ઓફિસ)', icon: '💼' },
+          { key: 'Study', label: 'Study (અભ્યાસ)', icon: '📚' },
+          { key: 'Health', label: 'Health (સ્વાસ્થ્ય)', icon: '🌿' },
+          { key: 'Projects', label: 'Projects (પ્રોજેક્ટ)', icon: '🚀' },
+        ].map((c) => {
+          const isSelected = categoryFilter === c.key;
+          return (
+            <button
+              key={c.key}
+              type="button"
+              onClick={() => setCategoryFilter(c.key)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                isSelected
+                  ? 'liquid-glass-fire text-white shadow-md scale-[1.02]'
+                  : 'bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-[var(--text-secondary)] hover:text-white'
+              }`}
+            >
+              <span>{c.icon}</span>
+              <span>{c.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Search, Category Filter & Sort */}
       <div className="grid grid-cols-2 sm:grid-cols-12 gap-2 sm:gap-3">
         <div className="col-span-2 sm:col-span-6 relative">

@@ -100,6 +100,28 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  // Prevent virtual keyboard from covering inputs on iOS mobile
+  useEffect(() => {
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        document.body.classList.add('keyboard-open');
+        setTimeout(() => {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 200);
+      }
+    };
+    const handleFocusOut = () => {
+      document.body.classList.remove('keyboard-open');
+    };
+    window.addEventListener('focusin', handleFocusIn);
+    window.addEventListener('focusout', handleFocusOut);
+    return () => {
+      window.removeEventListener('focusin', handleFocusIn);
+      window.removeEventListener('focusout', handleFocusOut);
+    };
+  }, []);
+
   const refresh = useCallback(async () => {
     try {
       const res = await api.get<BootstrapData>('/api/bootstrap');

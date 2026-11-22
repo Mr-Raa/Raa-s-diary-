@@ -1145,7 +1145,13 @@ export function getAiMessages(conversationId: string): AiMessage[] {
     model: m.model ? String(m.model) : undefined,
     thinkingUsed: Boolean(m.thinking_used),
     imageAttached: Boolean(m.image_attached),
-    proposedActions: m.proposed_actions ? JSON.parse(String(m.proposed_actions)) : undefined,
+    proposedActions: (() => {
+      try {
+        return m.proposed_actions ? JSON.parse(String(m.proposed_actions)) : undefined;
+      } catch {
+        return undefined;
+      }
+    })(),
     createdAt: String(m.created_at),
   }));
 }

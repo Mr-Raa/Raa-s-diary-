@@ -273,6 +273,33 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/api/auth/change-password', (req, res) => {
+  try {
+    const user = getCurrentUser(req);
+    const { currentPassword, newPassword } = req.body as {
+      currentPassword?: string;
+      newPassword?: string;
+    };
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required.' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+    }
+    const row = db
+      .prepare('SELECT password_hash FROM users WHERE id = ?')
+      .get(user.id) as { password_hash: string } | undefined;
+    if (!row || !verifyPassword(currentPassword, row.password_hash)) {
+      return res.status(401).json({ error: 'Incorrect current password.' });
+    }
+    const newHash = hashPassword(newPassword);
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, user.id);
+    res.json({ ok: true, message: 'Password updated successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to change password.' });
+  }
+});
+
 // Bootstrap entire workspace state
 app.get('/api/bootstrap', (req, res) => {
   const user = getCurrentUser(req);

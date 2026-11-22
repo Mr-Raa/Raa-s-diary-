@@ -127,12 +127,16 @@ export const LiquidGlass: React.FC<LiquidGlassProps> = ({
     return () => ro.disconnect();
   }, []);
 
+  const isMobile =
+    typeof window !== 'undefined' &&
+    (window.innerWidth <= 768 || 'ontouchstart' in window);
+
   const mapUrl = useMemo(
-    () => buildBevelDisplacementMapUrl(size.w, size.h, radius, bevelDepth),
-    [size.w, size.h, radius, bevelDepth]
+    () => (isMobile ? '' : buildBevelDisplacementMapUrl(size.w, size.h, radius, bevelDepth)),
+    [isMobile, size.w, size.h, radius, bevelDepth]
   );
 
-  const blurPx = Math.max(0, Math.round(frost * 18));
+  const blurPx = isMobile ? 8 : Math.max(0, Math.round(frost * 18));
 
   return (
     <div

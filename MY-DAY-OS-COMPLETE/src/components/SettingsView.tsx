@@ -2,11 +2,16 @@ import React, { useState } from 'react';
 import {
   Bell,
   Calendar,
+  Check,
   Cloud,
   Database,
   Download,
+  Eye,
+  EyeOff,
   FileText,
   HardDrive,
+  KeyRound,
+  Lock,
   Shield,
   Smartphone,
   Sparkles,
@@ -47,6 +52,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ data, onRefresh, onO
   const [statusMsg, setStatusMsg] = useState('');
   const [toasts, setToasts] = useState<LiquidToastItem[]>([]);
 
+  // Password & PIN Change State
+  const [currentPass, setCurrentPass] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [passError, setPassError] = useState('');
+  const [passSuccess, setPassSuccess] = useState('');
+  const [passLoading, setPassLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+
+  const [diaryPin, setDiaryPin] = useState(() => localStorage.getItem('raas_diary_pin') || '1234');
+  const [newPinInput, setNewPinInput] = useState('');
+  const [pinSuccess, setPinSuccess] = useState('');
+
   const pushToast = (message: string, icon: LiquidToastItem['icon'] = 'check') => {
     const id = String(Date.now() + Math.random());
     setToasts((prev) => [...prev.slice(-2), { id, message, icon }]);
@@ -61,6 +79,53 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ data, onRefresh, onO
   };
 
   const s = data.settings;
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPassError('');
+    setPassSuccess('');
+    if (!currentPass || !newPass) {
+      setPassError('Current password and new password are required.');
+      return;
+    }
+    if (newPass.length < 6) {
+      setPassError('New password must be at least 6 characters.');
+      return;
+    }
+    if (newPass !== confirmPass) {
+      setPassError('New passwords do not match.');
+      return;
+    }
+    setPassLoading(true);
+    try {
+      await api.post('/api/auth/change-password', {
+        currentPassword: currentPass,
+        newPassword: newPass,
+      });
+      setCurrentPass('');
+      setNewPass('');
+      setConfirmPass('');
+      setPassSuccess('Password updated successfully! ✅');
+      pushToast('Password updated successfully', 'check');
+    } catch (err) {
+      setPassError(err instanceof Error ? err.message : 'Failed to change password.');
+    } finally {
+      setPassLoading(false);
+    }
+  };
+
+  const handleUpdatePin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!/^\d{4}$/.test(newPinInput)) {
+      setPassError('PIN must be exactly 4 digits.');
+      return;
+    }
+    localStorage.setItem('raas_diary_pin', newPinInput);
+    setDiaryPin(newPinInput);
+    setNewPinInput('');
+    setPinSuccess('Diary PIN updated! ✅');
+    pushToast('Diary PIN updated', 'check');
+  };
 
   const handleRequestBrowserNotif = async () => {
     if (!('Notification' in window)) {
@@ -504,6 +569,98 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ data, onRefresh, onO
             <button type="button" onClick={onOpenAuth} className="glass-button-primary px-4 py-2 text-xs font-semibold">
               Switch / Sign In / Create Account
             </button>
+
+            {/* Change Account Password Form */}
+            <div className="pt-4 border-t border-[var(--glass-border-subtle)] space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <KeyRound className="w-4 h-4 text-[var(--accent)]" />
+                <span>Change Account Password (પાસવર્ડ બદલો)</span>
+              </div>
+              <form onSubmit={handleChangePassword} className="space-y-2.5">
+                {passError && <p className="text-xs text-[var(--danger)]">{passError}</p>}
+                {passSuccess && <p className="text-xs text-[var(--success)]">{passSuccess}</p>}
+
+                <div>
+                  <label className="block text-xs font-medium mb-1">Current Password (વર્તમાન પાસવર્ડ)</label>
+                  <div className="relative">
+                    <input
+                      type={showPass ? 'text' : 'password'}
+                      value={currentPass}
+                      onChange={(e) => setCurrentPass(e.target.value)}
+                      placeholder="Enter current password (default: mydayos2026)"
+                      className="glass-input w-full px-3 py-2 text-xs pr-9"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPass((v) => !v)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-white"
+                    >
+                      {showPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-medium mb-1">New Password (નવો પાસવર્ડ)</label>
+                    <input
+                      type={showPass ? 'text' : 'password'}
+                      value={newPass}
+                      onChange={(e) => setNewPass(e.target.value)}
+                      placeholder="Min 6 characters"
+                      className="glass-input w-full px-3 py-2 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Confirm New Password</label>
+                    <input
+                      type={showPass ? 'text' : 'password'}
+                      value={confirmPass}
+                      onChange={(e) => setConfirmPass(e.target.value)}
+                      placeholder="Repeat new password"
+                      className="glass-input w-full px-3 py-2 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={passLoading || !currentPass || !newPass}
+                  className="glass-button-primary px-4 py-2 text-xs font-semibold disabled:opacity-50"
+                >
+                  {passLoading ? 'Updating...' : 'Update Password (પાસવર્ડ સાચવો)'}
+                </button>
+              </form>
+            </div>
+
+            {/* Change 4-digit Diary PIN */}
+            <div className="pt-4 border-t border-[var(--glass-border-subtle)] space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <Lock className="w-4 h-4 text-emerald-400" />
+                  <span>Diary 4-Digit Lock PIN (ડાયરી PIN)</span>
+                </div>
+                <span className="text-xs font-mono-num text-[var(--text-secondary)]">Current: {diaryPin}</span>
+              </div>
+              <form onSubmit={handleUpdatePin} className="flex items-center gap-2">
+                <input
+                  type="password"
+                  maxLength={4}
+                  value={newPinInput}
+                  onChange={(e) => setNewPinInput(e.target.value.replace(/\D/g, ''))}
+                  placeholder="New 4 digits (e.g. 1234)"
+                  className="glass-input w-36 px-3 py-2 text-xs font-mono-num tracking-widest text-center"
+                />
+                <button
+                  type="submit"
+                  disabled={newPinInput.length !== 4}
+                  className="glass-button px-3.5 py-2 text-xs font-semibold disabled:opacity-50"
+                >
+                  Save PIN
+                </button>
+                {pinSuccess && <span className="text-xs text-[var(--success)]">{pinSuccess}</span>}
+              </form>
+            </div>
 
             <div className="pt-4 border-t border-[var(--glass-border-subtle)] space-y-2.5">
               <div className="flex items-center gap-2 text-sm font-semibold">

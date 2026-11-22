@@ -262,7 +262,7 @@ export const GoalsHabitsView: React.FC<GoalsHabitsViewProps> = ({
             }`}
           >
             {t === 'Recovery'
-              ? `Recovery Center (${overdueTasks.length + skippedRoutines.length})`
+              ? `Catch Up / બાકી વિગત (${overdueTasks.length + skippedRoutines.length})`
               : t}
           </button>
         ))}

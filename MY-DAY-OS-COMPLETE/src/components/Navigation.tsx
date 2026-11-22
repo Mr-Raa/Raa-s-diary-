@@ -243,14 +243,14 @@ export const TopBar: React.FC<TopBarProps> = ({
           whileTap={{ scale: 0.94 }}
           transition={{ type: 'spring', stiffness: 460, damping: 28 }}
           onClick={() => onSelectModule('dashboard')}
-          aria-label="Go to Raa's Diary Home"
+          aria-label="Go to MY DAY OS Home"
           className="lg:hidden shrink-0 flex items-center min-w-0 text-left"
         >
           <BrandLogo
             size="sm"
             showText
             animated
-            labelOverride={active === 'dashboard' ? "Raa's Diary" : activeItem?.mobileLabel || activeItem?.label}
+            labelOverride={active === 'dashboard' ? 'MY DAY OS' : activeItem?.mobileLabel || activeItem?.label}
           />
         </motion.button>
         <span className="hidden lg:inline text-sm font-semibold tracking-tight whitespace-nowrap">

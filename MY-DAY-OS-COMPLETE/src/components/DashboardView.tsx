@@ -812,17 +812,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             whileHover={{ y: -2 }}
             transition={IOS_SPRING_SNAPPY}
-            className="glass overdue-banner-animated p-4 flex items-center justify-between gap-2"
+            className="glass p-4 flex items-center justify-between gap-2 border border-amber-500/25 bg-amber-500/5 rounded-2xl"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <AlertTriangle className="w-5 h-5 text-[var(--warning)] shrink-0 overdue-icon-animated" />
+              <Clock className="w-5 h-5 text-amber-400 shrink-0" />
               <div className="min-w-0">
-                <div className="text-sm font-semibold truncate">
-                  {dayContext.overdueTasks.length} overdue{' '}
-                  {dayContext.overdueTasks.length === 1 ? 'task' : 'tasks'} in Recovery Center
+                <div className="text-sm font-semibold truncate text-[var(--text-primary)]">
+                  {settings.language === 'gu'
+                    ? `અગાઉના ${dayContext.overdueTasks.length} કામ બાકી છે (Pending Tasks)`
+                    : `${dayContext.overdueTasks.length} previous pending ${dayContext.overdueTasks.length === 1 ? 'task' : 'tasks'}`}
                 </div>
                 <div className="text-xs text-[var(--text-secondary)]">
-                  Past records are never auto-deleted. Reschedule or resolve them gently.
+                  {settings.language === 'gu'
+                    ? 'આ કામોને આજની તારીખમાં લાવો અથવા પૂરા કરો'
+                    : 'Reschedule them to today or mark them complete.'}
                 </div>
               </div>
             </div>
@@ -831,10 +834,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               whileHover={{ scale: 1.06, y: -1 }}
               whileTap={IOS_TAP_SCALE}
               transition={IOS_SPRING_SNAPPY}
-              onClick={() => onNavigate('goals')}
-              className="glass-button recover-btn-animated px-3.5 py-2 text-xs font-semibold whitespace-nowrap shrink-0"
+              onClick={() => onNavigate('tasks')}
+              className="glass-button-primary px-3.5 py-2 text-xs font-semibold whitespace-nowrap shrink-0"
             >
-              <span className="relative z-10">Recover</span>
+              <span>{settings.language === 'gu' ? 'કામો જુઓ' : 'View Tasks'}</span>
             </motion.button>
           </motion.div>
         )}

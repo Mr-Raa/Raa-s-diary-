@@ -48,6 +48,7 @@ function getCurrentHHmm(timezone: string): string {
 
 export const NotesView: React.FC<NotesViewProps> = ({ data, onRefresh }) => {
   const [tab, setTab] = useState<'Diary' | 'Notes'>('Diary');
+  const [diarySubTab, setDiarySubTab] = useState<'Story' | 'TimeLog'>('Story');
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<NoteItem | null>(null);
@@ -67,6 +68,38 @@ export const NotesView: React.FC<NotesViewProps> = ({ data, onRefresh }) => {
   const [jAchievements, setJAchievements] = useState(existingJournal?.achievements || '');
   const [jGratitude, setJGratitude] = useState(existingJournal?.gratitude || '');
   const [jMsg, setJMsg] = useState('');
+  const [isSavingJournal, setIsSavingJournal] = useState(false);
+
+  // Local draft auto-recovery
+  React.useEffect(() => {
+    const draftKey = `myday_diary_draft_${jDate}`;
+    const found = data.journals.find((j) => j.date === jDate);
+    if (found) {
+      setJMood(found.mood || 'Focused');
+      setJReflection(found.reflection || '');
+      setJAchievements(found.achievements || '');
+      setJGratitude(found.gratitude || '');
+    } else {
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft) {
+        setJReflection(savedDraft);
+      } else {
+        setJReflection('');
+      }
+      setJMood('Focused');
+      setJAchievements('');
+      setJGratitude('');
+    }
+    setJMsg('');
+  }, [jDate, data.journals]);
+
+  // Auto-save draft on type
+  const handleReflectionChange = (val: string) => {
+    setJReflection(val);
+    try {
+      localStorage.setItem(`myday_diary_draft_${jDate}`, val);
+    } catch {}
+  };
 
   // Time-stamped diary entry form ("Ketla vage su karyu")
   const [logModalOpen, setLogModalOpen] = useState(false);
@@ -152,15 +185,6 @@ export const NotesView: React.FC<NotesViewProps> = ({ data, onRefresh }) => {
     setIsLocked(false);
     setLockModalOpen(false);
   };
-
-  React.useEffect(() => {
-    const found = data.journals.find((j) => j.date === jDate);
-    setJMood(found?.mood || 'Focused');
-    setJReflection(found?.reflection || '');
-    setJAchievements(found?.achievements || '');
-    setJGratitude(found?.gratitude || '');
-    setJMsg('');
-  }, [jDate, data.journals]);
 
   const logsForDate = useMemo(
     () =>
@@ -383,46 +407,223 @@ export const NotesView: React.FC<NotesViewProps> = ({ data, onRefresh }) => {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-3 sm:gap-5 items-start">
-          {/* Left: Time-Stamped Activity Log ("Ketla vage su karyu") */}
-          <div className="xl:col-span-7 space-y-3 sm:space-y-4">
-            <form onSubmit={handleQuickAddDiaryLog} className="glass p-3.5 sm:p-5 space-y-3 sm:space-y-3.5">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-[var(--accent)]" />
-                  <h2 className="text-base font-semibold">
-                    What Did You Do &amp; When? (કેટલા વાગે શું કર્યું)
-                  </h2>
+        <div className="space-y-4">
+          {/* Sub-tabs: Apple Journal vs Time-Activity Log */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex gap-1.5 p-1 rounded-2xl bg-white/[0.04] border border-[var(--glass-border-subtle)] w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setDiarySubTab('Story')}
+                className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  diarySubTab === 'Story'
+                    ? 'glass-button-primary text-white shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:text-white'
+                }`}
+              >
+                <BookHeart className="w-3.5 h-3.5 text-pink-400" />
+                <span>✍️ Daily Journal (મુખ્ય ડાયરી)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiarySubTab('TimeLog')}
+                className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  diarySubTab === 'TimeLog'
+                    ? 'glass-button-primary text-white shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:text-white'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5 text-[var(--accent)]" />
+                <span>⏱️ Time Log (કેટલા વાગે શું કર્યું)</span>
+              </button>
+            </div>
+
+            <div className="text-xs text-[var(--text-muted)] hidden sm:block">
+              {diarySubTab === 'Story' ? 'Private Apple Journal reflection' : `${logsForDate.length} logged moments today`}
+            </div>
+          </div>
+
+          {/* Sub-tab 1: Daily Journal (Story) */}
+          {diarySubTab === 'Story' ? (
+            <form onSubmit={handleSaveJournal} className="glass p-4 sm:p-7 space-y-5 rounded-3xl max-w-4xl mx-auto shadow-2xl">
+              {/* Header with Mood Pills */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <BookHeart className="w-5 h-5 text-pink-400" />
+                    <h2 className="text-lg font-bold tracking-tight">Today&apos;s Story &amp; Mindset</h2>
+                  </div>
+                  <span className="text-xs font-medium text-[var(--accent)] bg-[var(--accent)]/10 px-2.5 py-1 rounded-full">
+                    {formatDateReadable(jDate, data.settings.dateFormat)}
+                  </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setQuickTime(getCurrentHHmm(data.settings.timezone))}
-                  className="text-[11px] text-[var(--accent)] hover:underline font-medium"
-                >
-                  Set Current Time
-                </button>
+
+                {/* Mood Pills Selector */}
+                <div>
+                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-2">
+                    આજે તમારો મૂડ કેવો છે? (How are you feeling today?)
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { mood: 'Calm', emoji: '🧘', label: 'Calm (શાંત)' },
+                      { mood: 'Focused', emoji: '🎯', label: 'Focused (એકાગ્ર)' },
+                      { mood: 'Energized', emoji: '⚡', label: 'Energized (ઉર્જાવાન)' },
+                      { mood: 'Happy', emoji: '😊', label: 'Happy (આનંદી)' },
+                      { mood: 'Tired', emoji: '😴', label: 'Tired (થાકેલા)' },
+                      { mood: 'Stressed', emoji: '😟', label: 'Stressed (તણાવ)' },
+                    ].map((m) => {
+                      const isSelected = jMood === m.mood;
+                      return (
+                        <button
+                          key={m.mood}
+                          type="button"
+                          onClick={() => setJMood(m.mood)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-[var(--accent)] text-slate-950 font-semibold shadow-[0_0_12px_rgba(56,189,248,0.4)] scale-105'
+                              : 'bg-white/[0.05] border border-white/10 text-[var(--text-secondary)] hover:text-white hover:bg-white/10'
+                          }`}
+                        >
+                          <span>{m.emoji}</span>
+                          <span>{m.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
-                <div className="sm:col-span-3">
-                  <label htmlFor="diary-time" className="sr-only">Entry Time</label>
+              {/* Gratitude & Wins Prompt Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+                <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/8 space-y-1.5">
+                  <label className="block text-xs font-semibold text-amber-300 flex items-center gap-1.5">
+                    <span>✨</span>
+                    <span>Gratitude (શેના માટે આભારી છો?)</span>
+                  </label>
                   <input
-                    id="diary-time"
-                    type="time"
-                    value={quickTime}
-                    onChange={(e) => setQuickTime(e.target.value)}
-                    className="glass-input w-full px-3 py-2 text-sm font-mono-num"
+                    value={jGratitude}
+                    onChange={(e) => setJGratitude(e.target.value)}
+                    placeholder="e.g. Good health, family dinner, peaceful morning..."
+                    className="glass-input w-full px-3 py-2 text-sm bg-transparent"
                   />
                 </div>
-                <div className="sm:col-span-5">
+
+                <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/8 space-y-1.5">
+                  <label className="block text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
+                    <span>🏆</span>
+                    <span>Wins &amp; Achievements (આજની સિદ્ધિ)</span>
+                  </label>
                   <input
-                    value={quickTitle}
-                    onChange={(e) => setQuickTitle(e.target.value)}
-                    placeholder="Short title (e.g. Lunch, Study, Walk)"
-                    className="glass-input w-full px-3 py-2 text-sm"
+                    value={jAchievements}
+                    onChange={(e) => setJAchievements(e.target.value)}
+                    placeholder="e.g. Finished project, 8 glasses water, 5km walk..."
+                    className="glass-input w-full px-3 py-2 text-sm bg-transparent"
                   />
                 </div>
-                <div className="sm:col-span-4">
+              </div>
+
+              {/* Main Apple Journal Writing Canvas */}
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-sm font-semibold flex items-center gap-1.5">
+                    <span>📝</span>
+                    <span>Full Journal Reflection (આખા દિવસની વાત અને વિચારો)</span>
+                  </label>
+
+                  {/* Gujarati / English Voice Dictation Button */}
+                  <button
+                    type="button"
+                    onClick={toggleVoiceRecording}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                      voiceRecording
+                        ? 'bg-rose-500 text-white animate-pulse shadow-[0_0_12px_rgba(244,63,94,0.6)]'
+                        : 'liquid-glass-pill text-[var(--accent)] hover:text-white'
+                    }`}
+                    title="બોલીને ડાયરી લખો"
+                  >
+                    {voiceRecording ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                    <span>{voiceRecording ? 'Stop Recording' : '🎙️ બોલીને લખો (Voice)'}</span>
+                  </button>
+                </div>
+
+                {voiceStatus && (
+                  <div className="text-xs text-[var(--accent)] font-medium p-2 rounded-xl bg-[var(--accent)]/10 animate-pulse">
+                    {voiceStatus}
+                  </div>
+                )}
+
+                <div className="relative rounded-2xl border border-white/12 bg-white/[0.03] focus-within:border-[var(--accent)] focus-within:ring-2 focus-within:ring-[var(--accent)]/20 transition-all">
+                  <textarea
+                    rows={10}
+                    value={jReflection}
+                    onChange={(e) => handleReflectionChange(e.target.value)}
+                    placeholder="અહીં શાંતિથી તમારા આજના વિચારો, અનુભવો કે જે કાંઈ લખવું હોય તે લખો... (તમે ગુજરાતી કે અંગ્રેજીમાં લખી શકો છો)"
+                    className="w-full p-4 sm:p-5 bg-transparent border-0 text-[17px] sm:text-[18px] leading-relaxed font-diary text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none resize-y min-h-[200px]"
+                  />
+                  <div className="px-4 py-2 border-t border-white/8 flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+                    <span>{jReflection.trim().split(/\s+/).filter(Boolean).length} words · {jReflection.length} characters</span>
+                    <span>Auto-saved locally</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                <span className="text-xs font-medium text-emerald-400">
+                  {jMsg}
+                </span>
+
+                <button
+                  type="submit"
+                  disabled={isSavingJournal}
+                  className="glass-button-primary px-6 py-3 rounded-2xl text-xs sm:text-sm font-semibold flex items-center gap-2 cursor-pointer shadow-lg active:scale-95 transition-transform"
+                >
+                  <BookHeart className="w-4 h-4" />
+                  <span>{isSavingJournal ? 'Saving Diary...' : 'Save Daily Diary (ડાયરી સેવ કરો)'}</span>
+                </button>
+              </div>
+            </form>
+          ) : (
+            /* Sub-tab 2: Time-Stamped Activity Log ("Ketla vage su karyu") */
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-3 sm:gap-5 items-start">
+              <div className="xl:col-span-6 space-y-3 sm:space-y-4">
+                <form onSubmit={handleQuickAddDiaryLog} className="glass p-3.5 sm:p-5 space-y-3 sm:space-y-3.5 rounded-3xl">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-[var(--accent)]" />
+                      <h2 className="text-base font-semibold">
+                        Log Moment (કેટલા વાગે શું કર્યું)
+                      </h2>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setQuickTime(getCurrentHHmm(data.settings.timezone))}
+                      className="text-[11px] text-[var(--accent)] hover:underline font-medium"
+                    >
+                      Set Current Time
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                    <div className="sm:col-span-4">
+                      <label htmlFor="diary-time" className="sr-only">Entry Time</label>
+                      <input
+                        id="diary-time"
+                        type="time"
+                        value={quickTime}
+                        onChange={(e) => setQuickTime(e.target.value)}
+                        className="glass-input w-full px-3 py-2 text-sm font-mono-num"
+                      />
+                    </div>
+                    <div className="sm:col-span-8">
+                      <input
+                        value={quickTitle}
+                        onChange={(e) => setQuickTitle(e.target.value)}
+                        placeholder="Short title (e.g. Lunch, Study, Walk)"
+                        className="glass-input w-full px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+
                   <GlassSelect
                     value={quickCategory}
                     onChange={(val) => setQuickCategory(val as Category)}
@@ -430,179 +631,97 @@ export const NotesView: React.FC<NotesViewProps> = ({ data, onRefresh }) => {
                     className="w-full px-3 py-2 text-sm"
                     options={CATEGORIES.map((c) => ({ value: c, label: c }))}
                   />
-                </div>
+
+                  <textarea
+                    rows={3}
+                    value={quickActivity}
+                    onChange={(e) => setQuickActivity(e.target.value)}
+                    placeholder="Write clearly what you did at this time... (e.g., Woke up at 6:30, drank warm water, completed 1 chapter)"
+                    className="glass-input w-full p-3 text-sm"
+                  />
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      className="glass-button-primary px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add to Today&apos;s Timeline</span>
+                    </button>
+                  </div>
+                </form>
               </div>
 
-              <textarea
-                rows={2}
-                value={quickActivity}
-                onChange={(e) => setQuickActivity(e.target.value)}
-                placeholder="Write clearly what you did at this time... (e.g., Woke up at 6:30, drank warm water, completed 1 chapter)"
-                className="glass-input w-full p-3 text-sm"
-              />
+              <div className="xl:col-span-6 space-y-3 sm:space-y-4">
+                <section className="glass p-3.5 sm:p-5 space-y-3 sm:space-y-4 rounded-3xl">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-semibold">
+                      Timeline for {formatDateReadable(jDate, data.settings.dateFormat)}
+                    </h3>
+                    <span className="text-xs font-mono-num text-[var(--text-muted)]">
+                      {logsForDate.length} {logsForDate.length === 1 ? 'entry' : 'entries'}
+                    </span>
+                  </div>
 
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="glass-button-primary px-4 py-2 text-xs font-semibold flex items-center gap-1.5"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add to Today&apos;s Diary Timeline</span>
-                </button>
-              </div>
-            </form>
-
-            <section className="glass p-3.5 sm:p-5 space-y-3 sm:space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-semibold">
-                  Timeline for {formatDateReadable(jDate, data.settings.dateFormat)}
-                </h3>
-                <span className="text-xs font-mono-num text-[var(--text-muted)]">
-                  {logsForDate.length} {logsForDate.length === 1 ? 'entry' : 'entries'}
-                </span>
-              </div>
-
-              {logsForDate.length === 0 ? (
-                <p className="text-xs text-[var(--text-muted)] py-6 text-center">
-                  No time-stamped diary entries recorded for this date yet. Add your first moment above!
-                </p>
-              ) : (
-                <div className="space-y-3 relative before:absolute before:left-[18px] before:top-3 before:bottom-3 before:w-px before:bg-[var(--glass-border)]">
-                  {logsForDate.map((entry) => (
-                    <div key={entry.id} className="relative pl-10">
-                      <span
-                        className="absolute left-3 top-3.5 w-3 h-3 rounded-full bg-[var(--accent)] ring-4 ring-[var(--background)]"
-                        aria-hidden="true"
-                      />
-                      <div className="p-3.5 rounded-2xl bg-white/[0.045] border border-[var(--glass-border-subtle)] space-y-1.5">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-mono-num text-xs font-bold text-[var(--accent)]">
-                              {formatTimeDisplay(entry.entryTime, data.settings.timeFormat)}
-                            </span>
-                            {entry.title && (
-                              <span className="text-sm font-semibold">{entry.title}</span>
-                            )}
-                            <span className="text-[11px] text-[var(--text-muted)]">
-                              · {entry.category}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => openEditLog(entry)}
-                              aria-label={`Edit diary entry ${entry.entryTime}`}
-                              className="glass-button p-1.5"
-                            >
-                              <Edit3 className="w-3 h-3" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                await api.del(`/api/diary-logs/${entry.id}`);
-                                await onRefresh();
-                              }}
-                              aria-label={`Delete diary entry ${entry.entryTime}`}
-                              className="glass-button p-1.5 text-[var(--danger)]"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
+                  {logsForDate.length === 0 ? (
+                    <p className="text-xs text-[var(--text-muted)] py-8 text-center">
+                      No time-stamped diary entries recorded for this date yet. Add your first moment on the left!
+                    </p>
+                  ) : (
+                    <div className="space-y-3 relative before:absolute before:left-[18px] before:top-3 before:bottom-3 before:w-px before:bg-[var(--glass-border)]">
+                      {logsForDate.map((entry) => (
+                        <div key={entry.id} className="relative pl-10">
+                          <span
+                            className="absolute left-3 top-3.5 w-3 h-3 rounded-full bg-[var(--accent)] ring-4 ring-[var(--background)]"
+                            aria-hidden="true"
+                          />
+                          <div className="p-3.5 rounded-2xl bg-white/[0.045] border border-[var(--glass-border-subtle)] space-y-1.5">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-mono-num text-xs font-bold text-[var(--accent)]">
+                                  {formatTimeDisplay(entry.entryTime, data.settings.timeFormat)}
+                                </span>
+                                {entry.title && (
+                                  <span className="text-sm font-semibold">{entry.title}</span>
+                                )}
+                                <span className="text-[11px] text-[var(--text-muted)]">
+                                  · {entry.category}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditLog(entry)}
+                                  aria-label={`Edit diary entry ${entry.entryTime}`}
+                                  className="glass-button p-1.5"
+                                >
+                                  <Edit3 className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await api.del(`/api/diary-logs/${entry.id}`);
+                                    await onRefresh();
+                                  }}
+                                  aria-label={`Delete diary entry ${entry.entryTime}`}
+                                  className="glass-button p-1.5 text-[var(--danger)]"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                            <p className="font-diary text-[17px] leading-relaxed text-[var(--text-primary)] whitespace-pre-line">
+                              {entry.activity}
+                            </p>
                           </div>
                         </div>
-                        <p className="font-diary text-[17px] leading-relaxed text-[var(--text-primary)] whitespace-pre-line">
-                          {entry.activity}
-                        </p>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-            </section>
-          </div>
-
-          {/* Right: Full-Day Narrative Diary ("Akha Divas ni Diary") */}
-          <form onSubmit={handleSaveJournal} className="xl:col-span-5 glass p-3.5 sm:p-6 space-y-3 sm:space-y-4">
-            <div className="flex items-center gap-2">
-              <BookHeart className="w-4 h-4 text-[var(--accent-secondary)]" />
-              <h2 className="text-base font-semibold">Full-Day Story &amp; Reflection</h2>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium mb-1">Mood &amp; Energy</label>
-                <GlassSelect
-                  value={jMood}
-                  onChange={setJMood}
-                  ariaLabel="Mood and energy"
-                  className="w-full px-3 py-2 text-sm"
-                  options={MOODS.map((m) => ({ value: m, label: m }))}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium mb-1">Gratitude</label>
-                <input
-                  value={jGratitude}
-                  onChange={(e) => setJGratitude(e.target.value)}
-                  placeholder="What are you grateful for?"
-                  className="glass-input w-full px-3.5 py-2 text-sm"
-                />
+                  )}
+                </section>
               </div>
             </div>
-
-            <div>
-              <label className="block text-xs font-medium mb-1">Key Achievements Today</label>
-              <input
-                value={jAchievements}
-                onChange={(e) => setJAchievements(e.target.value)}
-                placeholder="Wins completed on this date"
-                className="glass-input w-full px-3.5 py-2 text-sm"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-medium">
-                  Full-Day Diary (આખા દિવસની વાત / Thoughts)
-                </label>
-
-                {/* Voice to Diary Audio Capsule */}
-                <button
-                  type="button"
-                  onClick={toggleVoiceRecording}
-                  className={`px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                    voiceRecording
-                      ? 'bg-rose-500 text-white animate-pulse shadow-[0_0_12px_rgba(244,63,94,0.6)]'
-                      : 'liquid-glass-pill text-[var(--accent)] hover:text-white'
-                  }`}
-                  title="બોલીને ડાયરી લખો"
-                >
-                  {voiceRecording ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
-                  <span>{voiceRecording ? 'Stop Recording' : '🎙️ બોલીને લખો (Voice)'}</span>
-                </button>
-              </div>
-
-              {voiceStatus && (
-                <div className="text-[11px] text-[var(--accent)] font-medium mb-1 animate-pulse">
-                  {voiceStatus}
-                </div>
-              )}
-
-              <textarea
-                rows={7}
-                value={jReflection}
-                onChange={(e) => setJReflection(e.target.value)}
-                placeholder="Write or speak in Gujarati / English about how your whole day went, feelings, lessons, and memories..."
-                className="glass-input w-full p-3.5 font-diary text-[18px] leading-relaxed"
-              />
-            </div>
-
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-xs text-[var(--success)]">{jMsg}</span>
-              <button type="submit" className="glass-button-primary px-5 py-2.5 text-xs font-semibold">
-                Save Full-Day Diary
-              </button>
-            </div>
-          </form>
+          )}
         </div>
       )
     ) : (
