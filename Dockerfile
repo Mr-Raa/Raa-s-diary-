@@ -1,28 +1,36 @@
-# Production Dockerfile for Raa's Diary — Personal Life OS
-FROM node:22-alpine
+# Multi-stage resilient Dockerfile for Raa's Diary
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-ENV NODE_ENV=production
+# Copy dependency definition
+COPY package.json ./
+
+# Install all dependencies needed for build
+RUN npm install --no-audit --no-fund
+
+# Copy full application code (including pre-built dist)
+COPY . .
+
+# Ensure dist exists (build if missing)
+RUN if [ ! -f "dist/index.html" ]; then npm run build; fi
+
+# Production Runtime
+FROM node:22-alpine AS runner
+
+WORKDIR /app
+
 ENV PORT=3000
 ENV DATA_DIR=/app/data
 
-# Copy package manifests
-COPY package.json package-lock.json* ./
+COPY package.json ./
+RUN npm install --omit=dev --no-audit --no-fund || npm install --no-audit
 
-# Install dependencies needed for running the server
-RUN npm install --no-audit --no-fund
+# Copy built app and dist from builder
+COPY --from=builder /app /app
 
-# Copy all application code (including pre-built dist bundle)
-COPY . .
-
-# Ensure dist/ exists; build only if missing
-RUN if [ ! -f "dist/index.html" ]; then npm run build; fi
-
-# Create persistent data directory
 RUN mkdir -p /app/data
 
 EXPOSE 3000
 
-# Start Raa's Diary server
 CMD ["npx", "tsx", "server.ts"]
