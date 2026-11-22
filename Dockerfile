@@ -1,22 +1,5 @@
-# Multi-stage production Dockerfile for Raa's Diary
-FROM node:22-alpine AS builder
-
-WORKDIR /app
-
-# Copy dependency manifests
-COPY package.json package-lock.json* ./
-
-# Install all dependencies (including devDependencies needed for build)
-RUN npm ci || npm install
-
-# Copy source code
-COPY . .
-
-# Build frontend production bundle
-RUN npm run build
-
-# Production runner stage
-FROM node:22-alpine AS runner
+# Production Dockerfile for Raa's Diary — Personal Life OS
+FROM node:22-alpine
 
 WORKDIR /app
 
@@ -24,13 +7,22 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV DATA_DIR=/app/data
 
-# Create data directory for persistent SQLite database
-RUN mkdir -p /app/data
+# Copy package manifests
+COPY package.json package-lock.json* ./
 
-# Copy built application and node_modules from builder
-COPY --from=builder /app /app
+# Install dependencies needed for running the server
+RUN npm install --no-audit --no-fund
+
+# Copy all application code (including pre-built dist bundle)
+COPY . .
+
+# Ensure dist/ exists; build only if missing
+RUN if [ ! -f "dist/index.html" ]; then npm run build; fi
+
+# Create persistent data directory
+RUN mkdir -p /app/data
 
 EXPOSE 3000
 
-# Start server using tsx
+# Start Raa's Diary server
 CMD ["npx", "tsx", "server.ts"]
